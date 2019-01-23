@@ -8,10 +8,10 @@ neuradne španske strani te iste lige, imenovane [Hispanosnba.com](https://en.hi
 
 Za vsakega igralca bom zajel njegov/-o:
 * ime in priimek
+* igralni položaj
+* višino (v metrih) in težo (v kilogramih)
 * letnico rojstva
 * državo iz katere prihaja
-* višino in težo
-* igralni položaj
 * karierno statistiko (t.j. povprečje odigranih minut ter doseženih točk, skokov in podaj na tekmo)
 
 Delovne hipoteze:
