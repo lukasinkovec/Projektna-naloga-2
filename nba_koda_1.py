@@ -1,12 +1,10 @@
 import time
 import csv
+import json
 import os
 import re
+import sys
 import requests
-
-nba_url = "https://en.hispanosnba.com/players/nba-active/"
-nba_mapa = "nba_podatki"
-nba_csv = "nba_podatki.csv"
 
 
 def nalozi_url_v_niz(url):
@@ -17,104 +15,85 @@ def nalozi_url_v_niz(url):
         return ""
     return r.text
 
+def pripravi_imenik(ime_datoteke):
+    imenik = os.path.dirname(ime_datoteke)
+    if imenik:
+        os.makedirs(imenik, exist_ok=True)
 
-def shrani_niz_v_datoteko(niz, mapa, datoteka):
-    os.makedirs(mapa, exist_ok=True)
-    pot = os.path.join(mapa, datoteka)
-    with open(pot, 'w', encoding='utf-8') as izhodna_datoteka:
-        izhodna_datoteka.write(niz)
-    return None
+def shrani_spletno_stran(url, ime_datoteke, vsili_prenos=False):
+    try:
+        print('Shranjujem {} ...'.format(url), end='')
+        sys.stdout.flush()
+        if os.path.isfile(ime_datoteke) and not vsili_prenos:
+            print('shranjeno že od prej!')
+            return
+        r = requests.get(url)
+    except requests.exceptions.ConnectionError:
+        print('stran ne obstaja!')
+    else:
+        pripravi_imenik(ime_datoteke)
+        with open(ime_datoteke, 'w', encoding='utf-8') as datoteka:
+            datoteka.write(r.text)
+            print('shranjeno!')
 
+def vsebina_datoteke(ime_datoteke):
+    with open(ime_datoteke, encoding='utf-8') as datoteka:
+        return datoteka.read()
 
-def shrani_url_v_html():
-    for crka in ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "y", "z"]:
-        niz = nalozi_url_v_niz(nba_url + crka)
-        shrani_niz_v_datoteko(niz, nba_mapa, "nba_stran_" + crka + ".html")
-        time.sleep(1)
-    return None
-
-###############################################################################
-# Po pridobitvi podatkov jih želimo obdelati.
-###############################################################################
-
-
-def read_file_to_string(directory, filename):
-    '''Return the contents of the file "directory"/"filename" as a string.'''
-    path = os.path.join(directory, filename)
-    with open(path, 'r') as file_in:
-        return file_in.read()
-
-# Definirajte funkcijo, ki sprejme niz, ki predstavlja vsebino spletne strani,
-# in ga razdeli na dele, kjer vsak del predstavlja en oglas. To storite s
-# pomočjo regularnih izrazov, ki označujejo začetek in konec posameznega
-# oglasa. Funkcija naj vrne seznam nizov.
-
-
-def page_to_ads(page):
-    '''Split "page" to a list of advertisement blocks.'''
-    rx = re.compile(r'<div class="ad">(.*?)<div class="clear">',
-                    re.DOTALL)
-    ads = re.findall(rx, page)
-    return ads
-
-# Definirajte funkcijo, ki sprejme niz, ki predstavlja oglas, in izlušči
-# podatke o imenu, ceni in opisu v oglasu.
-
-
-def get_dict_from_ad_block(block):
-    '''Build a dictionary containing the name, description and price
-    of an ad block.'''
-    rx = re.compile(r'title="(?P<name>.*?)"'
-                    r'.*?</h3>\s*(?P<description>.*?)\s*</?div'
-                    r'.*?class="price">(?P<price>.*?)</div',
-                    re.DOTALL)
-    data = re.search(rx, block)
-    ad_dict = data.groupdict()
-    return ad_dict
-
-# Definirajte funkcijo, ki sprejme ime in lokacijo datoteke, ki vsebuje
-# besedilo spletne strani, in vrne seznam slovarjev, ki vsebujejo podatke o
-# vseh oglasih strani.
-
-
-def ads_from_file(filename, directory):
-    '''Parse the ads in filename/directory into a dictionary list.'''
-    page = read_file_to_string(filename, directory)
-    blocks = page_to_ads(page)
-    ads = [get_dict_from_ad_block(block) for block in blocks]
-    return ads
-
-def ads_frontpage():
-    return ads_from_file(cat_directory, frontpage_filename)
-
-###############################################################################
-# Obdelane podatke želimo sedaj shraniti.
-###############################################################################
-
-
-def write_csv(fieldnames, rows, directory, filename):
-    '''Write a CSV file to directory/filename. The fieldnames must be a list of
-    strings, the rows a list of dictionaries each mapping a fieldname to a
-    cell-value.'''
-    os.makedirs(directory, exist_ok=True)
-    path = os.path.join(directory, filename)
-    with open(path, 'w') as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+def zapisi_csv(slovarji, imena_polj, ime_datoteke):
+    pripravi_imenik(ime_datoteke)
+    with open(ime_datoteke, 'w', encoding='utf-8') as csv_datoteka:
+        writer = csv.DictWriter(csv_datoteka, fieldnames=imena_polj)
         writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
-    return None
+        for slovar in slovarji:
+            writer.writerow(slovar)
 
-# Definirajte funkcijo, ki sprejme neprazen seznam slovarjev, ki predstavljajo
-# podatke iz oglasa mačke, in zapiše vse podatke v csv datoteko. Imena za
-# stolpce [fieldnames] pridobite iz slovarjev.
+def zapisi_json(objekt, ime_datoteke):
+    pripravi_imenik(ime_datoteke)
+    with open(ime_datoteke, 'w', encoding='utf-8') as json_datoteka:
+        json.dump(objekt, json_datoteka, indent=4, ensure_ascii=False)
 
+vzorec1 = re.compile(r'<th scope="row" class="tdl"><a href="/players/(?P<ime>.*?)" title="', re.DOTALL)
 
-def write_cat_ads_to_csv(ads, directory, filename):
-    '''Write a CSV file containing one ad from "ads" on each row.'''
-    write_csv(ads[0].keys(), ads, directory, filename)
+vzorec2 = re.compile(
+    r'<div itemscope itemtype="https://schema.org/Person"><h1 class="h1fjug" itemprop="name">(?P<ime>.+?)</h1><meta itemprop="mainEntityOfPage".*?'
+    r'<p class="jugcab"><span itemprop="jobTitle">(?P<polozaj>(Point guard|Shooting guard|Small forward|Power forward|Center)).*?</span> \| \d+? \| <span class="jugequ".*?'
+    r'<li><strong>Height:</strong> <span itemprop="height">(?P<visina>\d\.\d\d) m / \d ft \d+? in</span></li>.*?'
+    r'<li><strong>Weight:</strong> <span itemprop="weight">(?P<teza>\d+?) kg / \d\d\d lbs</span></li>.*?'
+    r'<li><strong>Age: </strong>\d\d&nbsp;&nbsp;&nbsp;<strong>Birth date:</strong>  <time datetime="(?P<leto>19\d\d)-\d+?-\d+?" itemprop="birthDate">\w+? \d+?, 19\d\d</time>.*?'
+    r'<li><strong>Nationality:</strong> <span itemprop="nationality">(?P<drzava>.+?)</span></li>.*?'
+    r'Career<td>(?P<minute>\d+?\.\d)<td class="tdn">(?P<tocke>\d+?\.\d)<td>(?P<skoki>\d+?\.\d)<td>(?P<podaje>\d+?\.\d)<td>\d+?<td>\d+?<td>\d+?</table></section>',
+    re.DOTALL
+)
 
+def izloci_podatke_nba_igralca(ujemanje):
+    podatki_nba_igralcev = ujemanje.groupdict()
+    podatki_nba_igralcev['visina'] = float(podatki_nba_igralcev['visina'])
+    podatki_nba_igralcev['teza'] = int(podatki_nba_igralcev['teza'])
+    podatki_nba_igralcev['leto'] = int(podatki_nba_igralcev['leto'])
+    podatki_nba_igralcev['minute'] = float(podatki_nba_igralcev['minute'])
+    podatki_nba_igralcev['tocke'] = float(podatki_nba_igralcev['tocke'])
+    podatki_nba_igralcev['skoki'] = float(podatki_nba_igralcev['skoki'])
+    podatki_nba_igralcev['podaje'] = float(podatki_nba_igralcev['podaje'])
+    return podatki_nba_igralcev
 
-def write_cat_csv(ads):
-    '''Save "ads" to "cat_directory"/"csv_filename"'''
-    write_cat_ads_to_csv(ads, cat_directory, csv_filename)
+seznam_imen = []
+for crka in "y":#'abcdefghijklmnopqrstuvwyz':
+    url = 'https://en.hispanosnba.com/players/nba-active/{}'.format(crka)
+    vsebina = nalozi_url_v_niz(url)
+    for ujemanje in vzorec1.finditer(vsebina):
+        seznam_imen.append(ujemanje.groupdict()["ime"])
+        time.sleep(1)
+
+for ime in seznam_imen:
+    url = 'https://en.hispanosnba.com/players/{}'.format(ime)
+    shrani_spletno_stran(url, 'projektna-naloga-2/zajeti-podatki/{}.html'.format(ime))
+    time.sleep(1)
+
+podatki_nba_igralcev = []
+for ime in seznam_imen:
+    vsebina = vsebina_datoteke('projektna-naloga-2/zajeti-podatki/{}.html'.format(ime))
+    for ujemanje in vzorec2.finditer(vsebina):
+        podatki_nba_igralcev.append(izloci_podatke_nba_igralca(ujemanje))
+zapisi_json(podatki_nba_igralcev, 'projektna-naloga-2/obdelani-podatki/vsi-nba-igralci.json')
+zapisi_csv(podatki_nba_igralcev, ['ime', 'polozaj', 'visina', 'teza', 'leto', 'drzava', 'minute', 'tocke', 'skoki', 'podaje'], 'projektna-naloga-2/obdelani-podatki/vsi-nba-igralci.csv')
