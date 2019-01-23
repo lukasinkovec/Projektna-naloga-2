@@ -57,28 +57,28 @@ vzorec1 = re.compile(r'<th scope="row" class="tdl"><a href="/players/(?P<ime>.*?
 
 vzorec2 = re.compile(
     r'<div itemscope itemtype="https://schema.org/Person"><h1 class="h1fjug" itemprop="name">(?P<ime>.+?)</h1><meta itemprop="mainEntityOfPage".*?'
-    r'<p class="jugcab"><span itemprop="jobTitle">(?P<polozaj>(Point guard|Shooting guard|Small forward|Power forward|Center)).*?</span> \| \d+? \| <span class="jugequ".*?'
+    r'<p class="jugcab"><span itemprop="jobTitle">(?P<polozaj>(Point guard|Shooting guard|Small forward|Power forward|Center)).*?</span>.*?'
     r'<li><strong>Height:</strong> <span itemprop="height">(?P<visina>\d\.\d\d) m / \d ft \d+? in</span></li>.*?'
     r'<li><strong>Weight:</strong> <span itemprop="weight">(?P<teza>\d+?) kg / \d\d\d lbs</span></li>.*?'
-    r'<li><strong>Age: </strong>\d\d&nbsp;&nbsp;&nbsp;<strong>Birth date:</strong>  <time datetime="(?P<leto>19\d\d)-\d+?-\d+?" itemprop="birthDate">\w+? \d+?, 19\d\d</time>.*?'
+    r'<li><strong>Age: </strong>\d\d&nbsp;&nbsp;&nbsp;<strong>Birth date:</strong>  <time datetime="(?P<leto>\d\d\d\d)-\d\d-\d\d" itemprop="birthDate">\w+? \d+?, \d\d\d\d</time>.*?'
     r'<li><strong>Nationality:</strong> <span itemprop="nationality">(?P<drzava>.+?)</span></li>.*?'
-    r'Career<td>(?P<minute>\d+?\.\d)<td class="tdn">(?P<tocke>\d+?\.\d)<td>(?P<skoki>\d+?\.\d)<td>(?P<podaje>\d+?\.\d)<td>\d+?<td>\d+?<td>\d+?</table></section>',
+    r'Career<td>(?P<minute>\d+?\.\d)<td class="tdn">(?P<tocke>\d+?\.\d)<td>(?P<skoki>\d+?\.\d)<td>(?P<podaje>\d+?\.\d)<td>.+?<td>.+?<td>.+?</table></section>',
     re.DOTALL
 )
 
 def izloci_podatke_nba_igralca(ujemanje):
-    podatki_nba_igralcev = ujemanje.groupdict()
-    podatki_nba_igralcev['visina'] = float(podatki_nba_igralcev['visina'])
-    podatki_nba_igralcev['teza'] = int(podatki_nba_igralcev['teza'])
-    podatki_nba_igralcev['leto'] = int(podatki_nba_igralcev['leto'])
-    podatki_nba_igralcev['minute'] = float(podatki_nba_igralcev['minute'])
-    podatki_nba_igralcev['tocke'] = float(podatki_nba_igralcev['tocke'])
-    podatki_nba_igralcev['skoki'] = float(podatki_nba_igralcev['skoki'])
-    podatki_nba_igralcev['podaje'] = float(podatki_nba_igralcev['podaje'])
-    return podatki_nba_igralcev
+    podatki_nba_igralca = ujemanje.groupdict()
+    podatki_nba_igralca['visina'] = float(podatki_nba_igralca['visina'])
+    podatki_nba_igralca['teza'] = int(podatki_nba_igralca['teza'])
+    podatki_nba_igralca['leto'] = int(podatki_nba_igralca['leto'])
+    podatki_nba_igralca['minute'] = float(podatki_nba_igralca['minute'])
+    podatki_nba_igralca['tocke'] = float(podatki_nba_igralca['tocke'])
+    podatki_nba_igralca['skoki'] = float(podatki_nba_igralca['skoki'])
+    podatki_nba_igralca['podaje'] = float(podatki_nba_igralca['podaje'])
+    return podatki_nba_igralca
 
 seznam_imen = []
-for crka in "y":#'abcdefghijklmnopqrstuvwyz':
+for crka in 'abcdefghijklmnopqrstuvwyz':
     url = 'https://en.hispanosnba.com/players/nba-active/{}'.format(crka)
     vsebina = nalozi_url_v_niz(url)
     for ujemanje in vzorec1.finditer(vsebina):
